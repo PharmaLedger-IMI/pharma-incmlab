@@ -1,0 +1,24 @@
+<psk-example class="mobile-example">
+    <style>
+        .topPadding {
+        margin-top: 50px;
+        }
+        #snapshotImage,
+        #rawCropCanvas,
+        #streamPreview,
+        #cameraCanvas {
+            height: 100vh !important;
+            width: 100 !important;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: auto;
+            margin-bottom: auto;
+
+        }
+    </style>
+        <webc-container controller="NativeController">
+            <div class="col">
+                <img id='streamPreview' class="noPadding"/>
+            </div>
+        </webc-container>
+</psk-example>

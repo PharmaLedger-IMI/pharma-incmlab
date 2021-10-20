@@ -1,0 +1,15 @@
+{
+  "theme": "pdm-theme",
+  "pagesFallback": {
+    "name": "Native"
+  },
+  "pages": [
+    {
+      "name": "Native",
+      "path": "./native",
+      "src": "native.html",
+      "indexed": false,
+      "tag": "native"
+    }
+  ]
+}

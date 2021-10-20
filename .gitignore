@@ -1,0 +1,6 @@
+seed
+node_modules
+src/code/constitution
+src/code/scripts/bundles
+src/code/assets/ionic-core
+src/code/assets/pdm-web-components

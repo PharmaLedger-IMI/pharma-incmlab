@@ -1,0 +1,3 @@
+delete /
+addfolder src
+mount ../webcardinal/seed /code/webcardinal
