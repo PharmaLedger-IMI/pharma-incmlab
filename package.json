@@ -3,24 +3,13 @@
   "version": "1.0.0",
   "description": "Authentication Feature Uniqode",
   "scripts": {
-    "prebuild": "node ./node_modules/octopus/scripts/run prebuild devmode",
-    "build": "node ./node_modules/octopus/scripts/buildDossier ./bin/build.file --domain=epi",
-    "postbuild": "node ./node_modules/octopus/scripts/run postbuild devmode",
+    "build": "node ./../node_modules/octopus/scripts/buildDossier ./bin/build.file",
     "update": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PharmaLedger-IMI/acdc-authentication-feature-template.git "
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "octopus": "git+https://github.com/PrivateSky/octopus.git",
-    "ionicons": "^5.5.1",
-    "@ionic/cli": "^6.13.1",
-    "@ionic/core": "^5.6.0",
-    "jsdoc": "^3.6.6",
-    "markdown-include": "^0.4.3"
   },
   "keywords": [
     "pharmaledger",
