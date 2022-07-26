@@ -7,18 +7,30 @@
         #rawCropCanvas,
         #streamPreview,
         #cameraCanvas {
+            width: 100% !important;
             height: 100vh !important;
-            width: 100 !important;
             margin-left: auto;
             margin-right: auto;
             margin-top: auto;
             margin-bottom: auto;
 
         }
+        #canvas{
+            position: relative;
+            overflow:hidden;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
     </style>
-        <webc-container controller="NativeController">
-            <div class="col">
-                <img id='streamPreview' class="noPadding"/>
-            </div>
-        </webc-container>
+    <webc-container controller="NativeController">
+        <div class="col" style="position: relative;">
+            <img id='streamPreview' class="noPadding"/>
+        </div>
+        
+        <div class="col" style="position: absolute; background-color: transparent; top: 0; left: 0; overflow-y: hidden;">
+            <img src="assets/resources/target.png" class="noPadding" />
+        </div>
+        <canvas id="canvas" style="position: absolute; background-color: transparent; top: 0; left: 0; overflow-y: hidden;"> </canvas>
+
+    </webc-container>
 </psk-example>
