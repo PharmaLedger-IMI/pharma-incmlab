@@ -1,4 +1,4 @@
-import pluqModule from "../../libs/pluq_v07.js";
+import pluqModule from "../../libs/pluq.js";
 
 const {WebcController} = WebCardinal.controllers;
 const {PLCameraConfig} = window.Native.Camera;
@@ -123,13 +123,14 @@ function fillPluqConfig(pluq){
         pluqConfig.validations = new Object;
         // console.log(pluq);
         pluqConfig.validations.enabled = [
-            pluq.ValidationTypes.kGraphicCode,
-            pluq.ValidationTypes.kQrCode
+            pluq.ValidationTypes.kGraphicCode
+            
         ];
         pluqConfig.validations.disabled = [
             pluq.ValidationTypes.kHologramColor,
             pluq.ValidationTypes.kHologramFeatures,
-            pluq.ValidationTypes.kGlitter        
+            pluq.ValidationTypes.kGlitter,     
+            pluq.ValidationTypes.kQrCode
         ];
 }
 
@@ -200,27 +201,28 @@ function createPluqApi(pluq){
     decoder.delete();
 }
 
-function evaluateImage(pluq, plImage){
-        pluqApi.then((pluqApi) => {
-            var channels = 3;
-            var type = 16; // 3 channels
-            var buf;
+function evaluateImage(pluq, plImage, batch_id){
+    pluqApi.then((pluqApi) => {
+        var channels = 3;
+        var type = 16; // 3 channels
+        var buf;
+    
+        // The buffer can be create once when camera is started, and reused for all images,
+        // assuming image size is kept constant. For instance, if the image
+        // always comes from onFramePreview with the same size
+        // The buffer will still need to be destroyed after camera stops.
+        buf = pluq._create_buffer(plImage.width, plImage.height, channels);
+        pluq.HEAPU8.set(new Uint8Array(plImage.arrayBuffer), buf);
+        mat_image.set_mat_from_ptr(buf, plImage.height, plImage.width, type);
+        pluq._destroy_buffer(buf);
+    
+        vis_image.set_data(mat_image)
+        vis_image.set_colorspace(pluq.ColorSpace.RGB);
         
-            // The buffer can be create once when camera is started, and reused for all images,
-            // assuming image size is kept constant. For instance, if the image
-            // always comes from onFramePreview with the same size
-            // The buffer will still need to be destroyed after camera stops.
-            buf = pluq._create_buffer(plImage.width, plImage.height, channels);
-            pluq.HEAPU8.set(new Uint8Array(plImage.arrayBuffer), buf);
-            mat_image.set_mat_from_ptr(buf, plImage.height, plImage.width, type);
-            pluq._destroy_buffer(buf);
-        
-            vis_image.set_data(mat_image)
-            vis_image.set_colorspace(pluq.ColorSpace.RGB);
-            
-            pluqApi.Evaluate(vis_image);
-            pluqOutput = pluqApi.get_output();
-        })
+        pluqApi.Evaluate(vis_image, batch_id);
+        pluqOutput = pluqApi.get_output();
+        // console.log(pluqOutput.get_gcode_msg(), pluqOutput.get_qrcode_msg());
+    })
 }
 
 function startPluqApi(pluq, pluqApi){
@@ -262,9 +264,9 @@ export default class NativeController extends WebcController{
         this.camera = undefined;
         this.scene = undefined;
         this.material = undefined;
-        this.previewWidth = 360;
+        this.previewWidth = 720;
         this.previewHeight = Math.round(this.previewWidth * 16 / 9); // assume 16:9 portrait at start
-        this.targetPreviewFPS = 25;
+        this.targetPreviewFPS = 30;
         this.fpsMeasurementInterval = 5;
         this.previewFramesCounter = 0;
         this.previewFramesElapsedSum = 0;
@@ -291,10 +293,26 @@ export default class NativeController extends WebcController{
         // this.elements.select_cameras.selectedIndex = 0;
     }
 
+    // drawTarget(){
+    //     console.log("draw TARGET!");
+
+    //     var canvas = document.getElementById("myCanvas");
+    //     var ctx = canvas.getContext("2d");
+    //     // ctx.lineWidth = 3;
+    //     // ctx.strokeStyle = "black"; 
+    //     ctx.fillStyle = "black";
+    //     ctx.fillRect(canvas.width/2-50, canvas.height/2-70, 100, 200);
+    //     ctx.clearRect(canvas.width/2-45, canvas.height/2-65, 90, 190);
+    //     console.log(canvas.width, canvas.height);
+        
+    // }
+
     constructor(element, history, ...args) {
         super(element, history, ...args);
         const gs1Data = getQueryStringParams();
         const self = this;
+
+        // this.drawTarget();
 
         this.setModel({
             data: '',
@@ -344,7 +362,6 @@ export default class NativeController extends WebcController{
 
     }
 
-    
     async startCamera(mode){
         this.framesCount = 0;
         this.sendToEvaluate = true;
@@ -499,20 +516,24 @@ export default class NativeController extends WebcController{
             rgbImage.width = this.previewWidth;
             rgbImage.height = this.previewHeight;
         }
-
+        
         if(this.sendToEvaluate){
             pluqp.then( pluq => {
                 // var start_timer = performance.now();
                 pluq.HEAPU8.set(frame, this.preview_buf);
                 this.preview_image.set_mat_from_ptr(this.preview_buf, this.previewHeight, this.previewWidth, this.preview_image_type);
-                var qrCodeFound = this.preview_image.search_barcode_test();
+                var qrCodeFound = this.preview_image.search_barcode_test(200, 650, 300, 250);
                 if(qrCodeFound){
                     // console.log("QRCode Found: ", qrCodeFound);
                     var raw_frame = self.Camera.nativeBridge.getRawFrame();
                     raw_frame.then( raw_frame => {
                         raw_frame.width = 1080;
                         raw_frame.height = 1920;
-                        evaluateImage(pluq, raw_frame);
+                        const batchData = getQueryStringParams();
+                        evaluateImage(pluq, raw_frame, batchData.batchNumber);
+                        // console.log("BATCH INFO: ",batchData.batchNumber)
+                        // console.log("GC MSG: ", pluqOutput.get_gcode_msg());
+                        // console.log("QR MSG: ", pluqOutput.get_qrcode_msg());
                         // evaluateImage(pluq, rgbImage);
                         pluqApi.then(pluqApi => {
                             var isevaluating = pluqApi.IsEvaluating();
@@ -520,14 +541,42 @@ export default class NativeController extends WebcController{
                             if (!isevaluating) {
                                 this.sendToEvaluate = false;
                                 this.stopCamera();
+                                // var canvas = document.getElementById("canvas");
+                                // var ctx = canvas.getContext("2d");
+                                // // ctx.font = "12px Arial";
+                                // // ctx.fillText(pluqOutput.get_overall_state().value,0,40);
                                 if (pluqOutput.get_overall_state().value == 2) {
                                     console.log("VALID!");
+
+                                    // //ctx.fillText("VALID",40,40);
+                                    // var url = 'assets/resources/feedback/valid.png';
+                                    // const drawImage = (url) => {
+                                    //     const image = new Image();
+                                    //     image.src = 'assets/resources/feedback/valid.png';
+                                    //     image.onload = () => {
+                                    //        ctx.drawImage(image, 0, 0)
+                                    //     }
+                                    // }
+                                    // drawImage(url);
+
                                     this.report(true, undefined);
                                 } else if (pluqOutput.get_overall_state().value == 0) {
                                     console.log("INVALID!");
+                                    // //ctx.fillText("INVALID",40,40);
+                                    // var url = 'assets/resources/feedback/invalid.png';
+                                    // const drawImage = (url) => {
+                                    //     const image = new Image();
+                                    //     image.src = 'assets/resources/feedback/valid.png';
+                                    //     image.onload = () => {
+                                    //        ctx.drawImage(image, 0, 0)
+                                    //     }
+                                    // }
+                                    // drawImage(url);
                                     this.report(false, new AuthFeatureError("!"));
                                 } else {
                                     console.log("UNKNOWN!");
+
+                                    // //ctx.fillText("UNKWOWN",40,40);
                                     this.report(false, undefined);
                                 }
                             }
