@@ -55,48 +55,6 @@ const getQueryStringParams = () => {
         : {}
 };
 
-
-const getProductInfo = function(gtin, callback){
-    const gtinResolver = require('gtin-resolver');
-    const keySSI = gtinResolver.createGTIN_SSI('epi', 'epi', gtin);
-    const resolver = require('opendsu').loadApi('resolver');
-    resolver.loadDSU(keySSI, (err, dsu) => {
-        if (err)
-            return callback(err);
-        dsu.readFile('product/product.json', (err, product) => {
-            if (err)
-                return callback(err);
-            try{
-                product = JSON.parse(product);
-            } catch (e) {
-                return callback(e);
-            }
-            callback(undefined, product);
-        });
-    })
-}
-
-
-const getBatchInfo = function(gtin, batchNumber,  callback){
-    const gtinResolver = require('gtin-resolver');
-    const keySSI = gtinResolver.createGTIN_SSI('epi', 'epi', gtin, batchNumber);
-    const resolver = require('opendsu').loadApi('resolver');
-    resolver.loadDSU(keySSI, (err, dsu) => {
-        if (err)
-            return callback(err);
-        dsu.readFile('batch/batch.json', (err, batch) => {
-            if (err)
-                return callback(err);
-            try{
-                batch = JSON.parse(batch);
-            } catch (e) {
-                return callback(e);
-            }
-            callback(undefined, batch);
-        });
-    })
-}
-
 var pluqConfig = {};
 var pluqp = pluqModule();
 var pluqInput;
@@ -310,7 +268,6 @@ export default class NativeController extends WebcController{
     constructor(element, history, ...args) {
         super(element, history, ...args);
         const gs1Data = getQueryStringParams();
-        const self = this;
 
         // this.drawTarget();
 
@@ -343,19 +300,6 @@ export default class NativeController extends WebcController{
         // this.hide(this.elements.streamPreview);
         // this.hide(this.elements.status_fps_preview);
         // this.hide(this.elements.status_fps_raw);
-
-        getProductInfo(gs1Data.gtin, (err, product) => {
-            if (err)
-                console.log(`Could not read product info`, err);
-            else
-                self.model.product = product;
-            getBatchInfo(gs1Data.gtin, gs1Data.batchNumber, (err, batch) => {
-                if (err)
-                    console.log(`Could not read batch data`, err);
-                else
-                    self.model.batch = batch;
-            });
-        });
         
         pluqp.then(pluq => initializePluqApi(pluq));
         this.startCamera('mjpeg');
